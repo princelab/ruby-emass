@@ -9,7 +9,7 @@ Gem::Specification.new do |spec|
   spec.authors       = ["John T. Prince"]
   spec.email         = ["jtprince@gmail.com"]
   spec.summary       = %q{ruby implementation of Haimi's Rockwood and Haimi's emass code.}
-  spec.description   = %q{pure ruby implementation of Haimi's Rockwood and Haimi's emass code from 2006 JASMS article.}
+  spec.description   = %q{A pure ruby implementation of the Perttu Haimi's implementation of the Rockwood & Haimi 2006 JASMS "Efficient Calculation of Accurate Masses of Isotopic Peaks" method.}
   spec.homepage      = ""
   spec.license       = "MIT"
 

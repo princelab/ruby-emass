@@ -1,29 +1,13 @@
-# Ruby::Emass
+# ruby-emass
 
+A pure ruby implementation of the Perttu Haimi's implementation of the Rockwood & Haimi 2006 JASMS "Efficient Calculation of Accurate Masses of Isotopic Peaks" method.
 TODO: Write a gem description
 
 ## Installation
 
-Add this line to your application's Gemfile:
-
     gem 'ruby-emass'
-
-And then execute:
-
-    $ bundle
-
-Or install it yourself as:
-
-    $ gem install ruby-emass
 
 ## Usage
 
-TODO: Write usage instructions here
+require 'emass'  # require 'ruby-emass' just requires 'emass'
 
-## Contributing
-
-1. Fork it ( https://github.com/[my-github-username]/ruby-emass/fork )
-2. Create your feature branch (`git checkout -b my-new-feature`)
-3. Commit your changes (`git commit -am 'Add some feature'`)
-4. Push to the branch (`git push origin my-new-feature`)
-5. Create a new Pull Request
