@@ -1,11 +1,11 @@
 # coding: utf-8
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'ruby/emass/version'
+require 'emass/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "ruby-emass"
-  spec.version       = Ruby::Emass::VERSION
+  spec.version       = Emass::VERSION
   spec.authors       = ["John T. Prince"]
   spec.email         = ["jtprince@gmail.com"]
   spec.summary       = %q{ruby implementation of Haimi's Rockwood and Haimi's emass code.}
@@ -20,7 +20,7 @@ Gem::Specification.new do |spec|
 
   [
     #["nokogiri", "~> 1.6.1"],
-    #["mspire-molecular_formula", "~> 0.1.0"],
+    ["mspire-molecular_formula", "~> 0.1.0"],
   ].each do |args|
     spec.add_dependency(*args)
   end
@@ -31,6 +31,7 @@ Gem::Specification.new do |spec|
     ["rspec", "~> 2.14.1"], 
     ["rdoc", "~> 4.1.1"], 
     ["simplecov", "~> 0.8.2"],
+    ["fftw3"], # <- remove when can
   ].each do |args|
     spec.add_development_dependency(*args)
   end

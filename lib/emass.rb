@@ -1,23 +1,129 @@
 require "emass/version"
+require 'mspire/molecular_formula'
+
+# isotope file format:
+# Pb  4
+# 203.973020  0.014
+# 205.974440  0.241
+
+#def init_data(isotope_file)
+  #sad = Emass::SuperAtomData.new
+  #new_super_atom = nil
+  #IO.foreach(isotope_file) do |line|
+    #line.chomp!
+    #if line[/\A[[:alpha:]]/]
+      
+    #if line.size > 0
+
+      ## SuperAtomList
+    #else
+      #sad << new_super_atom
+
+    #if 
+  #end
+#end
 
 module Emass
 
-  # holds patterns
-  class SuperAtomList < Array
+  # ElemMap // map from element abbreviation to index in the elements table
+  # FormMap // map from element index to the count of occurences in the formula
+
+  # holds superatomlists. Indexed by element (element_number in original)
+  class SuperAtomData < Hash
+    # returns a new array with a nil for each missing mass_number within the
+    # array of isotopes
+    def self.insert_nils(elemental_isotopes)
+      mass_num_cnt = elemental_isotopes.first.mass_number
+      is_tmp = [elemental_isotopes.first]
+      elemental_isotopes[1..-1].each do |isotope|
+        loop do
+          if isotope.mass_number - mass_num_cnt > 1
+            is_tmp << nil
+            mass_num_cnt += 1
+          else
+            mass_num_cnt += 1
+            break
+          end
+        end
+        is_tmp << isotope
+      end
+      is_tmp
+    end
+
+    # returns a superatomlist
+    def self.create_from_isotope_data(isotopes_by_element=Mspire::Isotope::BY_ELEMENT)
+      sad = self.new
+      isotopes_by_element.each do |el, elemental_isotopes|
+        with_nils = insert_nils(elemental_isotopes)
+        # fill in missing isotopes with a nil
+        observe = (elemental_isotopes.map(&:mass_number).first == 32)
+        pattern = Pattern.new( 
+          with_nils.map do |iso|
+            (mass, rel_abund) = iso ? [iso.atomic_mass, iso.relative_abundance] : [nil,0]
+            Peak.new(mass, rel_abund)
+          end
+        )
+        sad[el] = SuperAtomList.new([pattern])
+      end
+      sad
+    end
   end
 
-  # holds superatomlists
-  class SuperAtomData < Array
+  # holds patterns.  Indexed by bit_number (??) may hold up to 8 superatoms
+  class SuperAtomList < Array
   end
 
   Peak = Struct.new(:mass, :rel_area)
 
-  # holds peaks
+  # holds peaks. indexed by peak number
   class Pattern < Array
+    DIGITS_TO_PRINT = 6
+    LIMIT = 0.0   # 1e-30 usually good enough, too
+
+    # takes an array of doublets, casts them into Emass::Peaks
+    # and returns a Pattern object
+    def self.from_doublets(*array)
+      self.new( array.map {|ar| Peak.new(*ar) } )
+    end
+
+    def self.calculate(formula, super_atom_data, limit=LIMIT)
+      result = Pattern[Peak.new(0.0, 1.0)] # <- 0 mass, 1.0 area
+
+      # for(FormMap::iterator i = fm.begin(); i != fm.end(); i++) {
+      formula.each do |el,cnt|
+        sal = super_atom_data[el]
+        n = cnt
+        j = 0
+        while n > 0
+          puts "ROUND:"
+          p j
+          p n
+          sz = sal.size
+          if j == sz
+            sal[j] = sal[j-1].convolute(sal[j-1])
+            sal[j].prune!(limit)
+          end
+          if (n & 1) != 0
+            result = result.convolute(sal[j])
+            result.prune!(limit)
+          end
+          n = (n >> 1)
+          j += 1
+        end
+      end
+      result
+
+      ## take charge into account, if any
+
+    end
 
     # merge two patterns into one.  (convolute_basic in emass). Returns a new Pattern
     # reverse other, then convolve in a special way
     def convolute(other)
+      #puts "SELF:"
+      #p self
+      #puts "SELF:"
+      #p other
       o_sz = other.size
       other.reverse!
       pad = Array.new(o_sz-1)
@@ -26,11 +132,14 @@ module Emass
         summass = 0.0
         sumweight = 0.0
         peaks = mini_self.zip(other) do |a,b|
-          next unless a
+          next unless a && b
           sumweight += (weight = a.rel_area * b.rel_area)
           summass += (a.mass+b.mass) * weight
         end
-        Peak.new(sumweight == 0 ? nil : summass / sumweight, sumweight)
+        Peak.new( 
+                 sumweight == 0 ? nil : (summass / sumweight), 
+                 sumweight
+                )
       end
       self.pop(o_sz-1) ; self.shift(o_sz-1)
       other.reverse!
@@ -39,88 +148,28 @@ module Emass
 
     def prune!(limit)
       self.slice! 0...(self.index {|p| p.rel_area > limit })
-      self.slice! self.rindex {|p| p.rel_area > limit }..-1
+      self.slice! (self.rindex {|p| p.rel_area > limit }+1)..-1
       self
+    end
+
+    # similar to print_pattern
+    def to_s(digits=DIGITS_TO_PRINT)
+      max_area = self.map(&:rel_area).max
+      return '' if max_area == 0
+
+      # wcout.setf(ios::fixed);  <- format fixed (scientific??)
+      # wcout.precision(digits);  <- num digits to round
+      print_limit = (10.0**-digits) / 2
+
+      self.map do |peak|
+        mass = peak.mass
+        rel_area = peak.rel_area
+        val_perc = rel_area / max_area * 100
+        if mass && val_perc >= print_limit
+          sprintf "%.#{digits}f %.#{digits}f\n", mass, val_perc
+        end
+      end.join
     end
 
   end
 end
-
-include Emass
-
-#alpha = Pattern.new( [[12,0.9],[13,0.1]].map {|data| Peak.new(*data) } )
-#beta = Pattern.new( [[1,0.99],[2,0.1]].map {|data| Peak.new(*data) } )
-
-alpha = Pattern.new( [[12,0.9],[13,0.1],[14,0.3]].map {|data| Peak.new(*data) } )
-beta = Pattern.new( [[1,0.99],[2,0.1],[3,0.4]].map {|data| Peak.new(*data) } )
-
-p alpha.convolute(beta)
-
-abort 'here'
-
-=begin
-  // [g0,g1,g2]
-  // [f0,f1,f2,f3]
-  //
-  // [g0,g1,g2][f0,f1,f2,f3]
-  // [0  1  2   3  4  5  6
-  h.clear();
-  size_t g_n = g.size(); //3
-  size_t f_n = f.size(); //4
-  if(g_n == 0 || f_n == 0)
-     return;
-  // 0...(3+4-1 [i.e. 0..5])
-  for(size_t k = 0; k < g_n + f_n - 1; k++) {  // k=0,1,2,3,4,5,6
-    double sumweight = 0, summass = 0;
-    size_t start = k < (f_n - 1) ? 0 : k - f_n + 1; // max(0, k-f_n+1)  // s=0,0,0,0,1,2,3
-    size_t end = k < (g_n - 1) ? k : g_n - 1;       // min(g_n - 1, k)  // e=0,1,2,2,2,2,2
-    for(size_t i = start; i <= end; i++) {  // single it, i=0;0..1;0..2;0..2,1..2,2..2,3..2
-      double weight = g[i].rel_area * f[k - i].rel_area; // g0*f0;g0*f1"+"g1*f0;g0*f2"+"g1*f1"+"g2*f0;g0*f3+g1*f2+g2*f1;g1*f3+g2*f2;g2*f3;
-      double mass = g[i].mass + f[k - i].mass; // g0+f0;g0+f1"+"g1+f0;g0+f2"+"g1+f1"+"g2+g2+f0;
-      sumweight += weight;  // ^
-      summass += weight * mass; // w*m
-    }
-    peak p;
-    if(sumweight == 0)
-      p.mass = DUMMY_MASS;
-    else
-      p.mass = summass / sumweight;
-    p.rel_area = sumweight;
-    h.push_back(p);
-
-
-// Merge two patterns to one.
-void convolute_basic(Pattern & h, const Pattern & g, const Pattern & f)
-{
-  // [g0,g1,g2]
-  // [f0,f1,f2]
-  //
-  // [g0,g1,g2][f0,f1,f2]
-  // [0  1  2   3  4  5 ]
-  h.clear();
-  size_t g_n = g.size(); //3
-  size_t f_n = f.size(); //3
-  if(g_n == 0 || f_n == 0)
-     return;
-  // k=>0..4
-  for(size_t k = 0; k < g_n + f_n - 1; k++) {  // k=0,1,2,3,4,5
-    double sumweight = 0, summass = 0;                                  //       |
-    size_t start = k < (f_n - 1) ? 0 : k - f_n + 1; // max(0, k-f_n+1)  // s=0,0,0,1,2,3 <- 0 for (0...f_n) then 0..g_n
-    size_t end = k < (g_n - 1) ? k : g_n - 1;       // min(g_n - 1, k)  // e=0,1,2,2,2,2
-    for(size_t i = start; i <= end; i++) {  // single it, i=0;0..1;0..2;0..2,1..2,2..2,3..2
-      double weight = g[i].rel_area * f[k - i].rel_area; // g0*f0;g0*f1"+"g1*f0;g0*f2"+"g1*f1"+"g2*f0;g1*f3+g1*f2+g2*f1;g1*f3+g2*f2;
-      double mass = g[i].mass + f[k - i].mass;
-      sumweight += weight;  // ^
-      summass += weight * mass; // w*m
-    }
-    peak p;
-    if(sumweight == 0)
-      p.mass = DUMMY_MASS;
-    else
-      p.mass = summass / sumweight;
-    p.rel_area = sumweight;
-    h.push_back(p);
-  }
-}
-
-=end

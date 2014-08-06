@@ -1,9 +1,9 @@
-require 'simplecov'
-SimpleCov.start
+#require 'simplecov'
+#SimpleCov.start
 
 require 'rspec'
 
-TESTFILES = File.dirname(__FILE__) + '/testfiles'
+#TESTFILES = File.dirname(__FILE__) + '/testfiles'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.
