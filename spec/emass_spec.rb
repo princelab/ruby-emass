@@ -13,37 +13,37 @@ require 'mspire/isotope'
   #obj[:Ar].first.map(&:rel_area).should == [0.003365, 0, 0.000632, 0, 0.996003]
 #end
 
-describe 'can calculate isotope dists' do
-  before do
-    myhash = Mspire::Isotope::NIST::BY_ELEMENT.dup
-    myhash[:C][0].relative_abundance = 0.988930
-    myhash[:C][1].atomic_mass = 13.0033554
-    myhash[:C][1].relative_abundance = 0.011070
+#describe 'can calculate isotope dists' do
+  #before do
+    #myhash = Mspire::Isotope::NIST::BY_ELEMENT.dup
+    #myhash[:C][0].relative_abundance = 0.988930
+    #myhash[:C][1].atomic_mass = 13.0033554
+    #myhash[:C][1].relative_abundance = 0.011070
 
-    h = myhash[:H]
-    h[0].atomic_mass = 1.0078246
-    h[1].atomic_mass = 2.0141021
-    h[0].relative_abundance = 0.99985 
-    h[1].relative_abundance = 0.00015
+    #h = myhash[:H]
+    #h[0].atomic_mass = 1.0078246
+    #h[1].atomic_mass = 2.0141021
+    #h[0].relative_abundance = 0.99985 
+    #h[1].relative_abundance = 0.00015
 
-    @sad = Emass::SuperAtomData.create_from_isotope_data(myhash)
-  end
+    #@sad = Emass::SuperAtomData.create_from_isotope_data(myhash)
+  #end
   
-  it 'works' do
-    # C2H4
-    # formula: C2H4 charge : 0 limit: 0.000000e+00
-    # 28.031298 100.000000
-    # 29.034730 2.298792
-    # 30.038298 0.013887
-    # 31.044401 0.000008
+  #it 'works' do
+    ## C2H4
+    ## formula: C2H4 charge : 0 limit: 0.000000e+00
+    ## 28.031298 100.000000
+    ## 29.034730 2.298792
+    ## 30.038298 0.013887
+    ## 31.044401 0.000008
 
-    puts Emass::Pattern.calculate(Mspire::MF['C2H4'], @sad).to_s
-  end
+    #puts Emass::Pattern.calculate(Mspire::MF['C2H4'], @sad).to_s
+  #end
 
 #  it 'works for Carbon' do
     #Emass::Pattern.calculate(Mspire::MF['C'], @sad).should == Emass::Pattern.from_doublets([12.0, 0.98893], [13.0033554, 0.01107])
   #end
-end
+#end
 
 #describe 'pruning a pattern' do
   #subject{ 
@@ -65,12 +65,29 @@ end
   #end
 #end
 
-#describe 'convoluting patterns' do
-  ##alpha = Pattern.new( [[12,0.9],[13,0.1]].map {|data| Peak.new(*data) } )
-  ##beta = Pattern.new( [[1,0.99],[2,0.1]].map {|data| Peak.new(*data) } )
+describe 'convoluting patterns' do
+  # takes an array of doublets
+  def pattern_from_array(*array)
+    Emass::Pattern.new( array.map {|data| Emass::Peak.new(*data) } )
+  end
 
-  #alpha = Emass::Pattern.new( [[12,0.9],[13,0.1],[14,0.3]].map {|data| Emass::Peak.new(*data) } )
-  #beta = Emass::Pattern.new( [[1,0.99],[2,0.1],[3,0.4]].map {|data| Emass::Peak.new(*data) } )
+  def close_patterns(pattern1, pattern2)
+    pattern2.each_with_index do |p2,i|
+      p2.zip(pattern1[i]) do |lilp2, lilp1|
+        expect(lilp1).to be_within(1e-10).of(lilp2)
+      end
+    end
+  end
 
-  #p alpha.convolute(beta)
-#end
+  it 'should give the same convolution as emass' do
+    # these were taken directly from emass by printing the structures before
+    # and after convolute
+    alpha = pattern_from_array [0,1]
+    beta = pattern_from_array [1.00782460,1.0], [2.01410210, 0.0001500225]
+    alpha.convolute(beta).should == pattern_from_array([1.00782460, 1.0], [2.01410210, 0.0001500225])
+
+    alpha = pattern_from_array [2.01564920, 1.0], [3.02192670, 0.0003000450], [4.02820420, 0.0000000225]
+    beta = pattern_from_array [24.00000000, 1.0], [25.00335540, 0.0223878333], [26.00671080, 0.0001253038]
+    close_patterns alpha.convolute(beta), [[26.01564920, 1.0],[27.01904324449037, 0.0226878783],[28.02250964963153, 0.0001320436], [29.02867613304374, 0.0000000381], [30.034915, 2.8193355000000002e-12]]
+  end
+end
