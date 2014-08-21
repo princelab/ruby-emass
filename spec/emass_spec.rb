@@ -13,37 +13,42 @@ require 'mspire/isotope'
   #obj[:Ar].first.map(&:rel_area).should == [0.003365, 0, 0.000632, 0, 0.996003]
 #end
 
-#describe 'can calculate isotope dists' do
-  #before do
-    #myhash = Mspire::Isotope::NIST::BY_ELEMENT.dup
-    #myhash[:C][0].relative_abundance = 0.988930
-    #myhash[:C][1].atomic_mass = 13.0033554
-    #myhash[:C][1].relative_abundance = 0.011070
+describe 'can calculate isotope dists' do
+  before do
+    myhash = Mspire::Isotope::NIST::BY_ELEMENT.dup
+    myhash[:C][0].relative_abundance = 0.988930
+    myhash[:C][1].atomic_mass = 13.0033554
+    myhash[:C][1].relative_abundance = 0.011070
 
-    #h = myhash[:H]
-    #h[0].atomic_mass = 1.0078246
-    #h[1].atomic_mass = 2.0141021
-    #h[0].relative_abundance = 0.99985 
-    #h[1].relative_abundance = 0.00015
+    h = myhash[:H]
+    h[0].atomic_mass = 1.0078246
+    h[1].atomic_mass = 2.0141021
+    h[0].relative_abundance = 0.99985 
+    h[1].relative_abundance = 0.00015
 
-    #@sad = Emass::SuperAtomData.create_from_isotope_data(myhash)
-  #end
+    @sad = Emass::SuperAtomData.create_from_isotope_data(myhash)
+  end
   
-  #it 'works' do
-    ## C2H4
-    ## formula: C2H4 charge : 0 limit: 0.000000e+00
-    ## 28.031298 100.000000
-    ## 29.034730 2.298792
-    ## 30.038298 0.013887
-    ## 31.044401 0.000008
+  it 'works' do
+    # C2H4
+    # formula: C2H4 charge : 0 limit: 0.000000e+00
+    # 28.031298 100.000000
+    # 29.034730 2.298792
+    # 30.038298 0.013887
+    # 31.044401 0.000008
 
+    puts Emass::Pattern.calculate(Mspire::MF['CH2'], @sad).to_s
+    # 14.015649 100.000000
+    # 15.019081 1.149396
+    # 16.025302 0.000338
+    
     #puts Emass::Pattern.calculate(Mspire::MF['C2H4'], @sad).to_s
-  #end
+  end
 
 #  it 'works for Carbon' do
     #Emass::Pattern.calculate(Mspire::MF['C'], @sad).should == Emass::Pattern.from_doublets([12.0, 0.98893], [13.0033554, 0.01107])
   #end
-#end
+end
 
 #describe 'pruning a pattern' do
   #subject{ 

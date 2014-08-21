@@ -87,23 +87,35 @@ module Emass
     end
 
     def self.calculate(formula, super_atom_data, limit=LIMIT)
+      puts "STARTING CALCULATE"
       result = Pattern[Peak.new(0.0, 1.0)] # <- 0 mass, 1.0 area
 
       # for(FormMap::iterator i = fm.begin(); i != fm.end(); i++) {
+      p formula
+      formula.delete(:C)
+      formula[:C] = 1
+      p formula
+
       formula.each do |el,cnt|
         sal = super_atom_data[el]
         n = cnt
         j = 0
         while n > 0
-          puts "ROUND:"
-          p j
-          p n
           sz = sal.size
+          puts "sz: #{sz}"
+          puts "n: #{n}"
           if j == sz
+            puts "j == sz"
+            #sal << Pattern.new
+            puts "SAL j-1:"
+            puts sal[j-1].to_s
             sal[j] = sal[j-1].convolute(sal[j-1])
+            puts "SAL j:"
+            puts sal[j].to_s
             sal[j].prune!(limit)
           end
           if (n & 1) != 0
+            puts "n & 1"
             result = result.convolute(sal[j])
             result.prune!(limit)
           end
@@ -111,6 +123,7 @@ module Emass
           j += 1
         end
       end
+      puts "ENDING CALCULATE"
       result
 
       ## take charge into account, if any
