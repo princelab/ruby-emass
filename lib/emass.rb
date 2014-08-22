@@ -87,14 +87,13 @@ module Emass
     end
 
     def self.calculate(formula, super_atom_data, limit=LIMIT)
-      puts "STARTING CALCULATE"
       result = Pattern[Peak.new(0.0, 1.0)] # <- 0 mass, 1.0 area
 
       # for(FormMap::iterator i = fm.begin(); i != fm.end(); i++) {
-      p formula
-      formula.delete(:C)
-      formula[:C] = 1
-      p formula
+      #p formula
+      #formula.delete(:C)
+      #formula[:C] = 1
+      #p formula
 
       formula.each do |el,cnt|
         sal = super_atom_data[el]
@@ -102,20 +101,12 @@ module Emass
         j = 0
         while n > 0
           sz = sal.size
-          puts "sz: #{sz}"
-          puts "n: #{n}"
           if j == sz
-            puts "j == sz"
             #sal << Pattern.new
-            puts "SAL j-1:"
-            puts sal[j-1].to_s
             sal[j] = sal[j-1].convolute(sal[j-1])
-            puts "SAL j:"
-            puts sal[j].to_s
             sal[j].prune!(limit)
           end
           if (n & 1) != 0
-            puts "n & 1"
             result = result.convolute(sal[j])
             result.prune!(limit)
           end
@@ -123,7 +114,6 @@ module Emass
           j += 1
         end
       end
-      puts "ENDING CALCULATE"
       result
 
       ## take charge into account, if any
@@ -133,20 +123,17 @@ module Emass
     # merge two patterns into one.  (convolute_basic in emass). Returns a new Pattern
     # reverse other, then convolve in a special way
     def convolute(other)
-      #puts "SELF:"
-      #p self
-      #puts "SELF:"
-      #p other
       o_sz = other.size
-      other.reverse!
-      pad = Array.new(o_sz-1)
-      self.unshift(*pad) ; self.push(*pad)
-      newpeaks = self.each_cons(o_sz).map do |mini_self|
+      other_rev = other.reverse
+      pad_sz = o_sz-1
+      pad = Array.new(pad_sz)
+      newpeaks = [*pad, *self, *pad].each_cons(o_sz).map do |mini_self|
         summass = 0.0
         sumweight = 0.0
-        peaks = mini_self.zip(other) do |a,b|
-          next unless a && b
-          sumweight += (weight = a.rel_area * b.rel_area)
+        peaks = mini_self.zip(other_rev) do |a,b|
+          next unless a && b && a.mass && b.mass
+          weight = a.rel_area * b.rel_area
+          sumweight += weight
           summass += (a.mass+b.mass) * weight
         end
         Peak.new( 
@@ -154,8 +141,6 @@ module Emass
                  sumweight
                 )
       end
-      self.pop(o_sz-1) ; self.shift(o_sz-1)
-      other.reverse!
       Pattern.new(newpeaks)
     end
 
@@ -165,8 +150,11 @@ module Emass
       self
     end
 
-    # similar to print_pattern
-    def to_s(digits=DIGITS_TO_PRINT)
+    # similar to print_pattern, this normalizes to the max rel_area, puts
+    # abundances in percentages, truncates the values to the given number of
+    # digits, and follows each space separated mass, rel_area pair with a
+    # newline.
+    def emass_normalize_truncate_percentize_stringify(digits=DIGITS_TO_PRINT)
       max_area = self.map(&:rel_area).max
       return '' if max_area == 0
 
@@ -182,6 +170,11 @@ module Emass
           sprintf "%.#{digits}f %.#{digits}f\n", mass, val_perc
         end
       end.join
+    end
+
+    alias_method :to_s, :emass_normalize_truncate_percentize_stringify
+
+    def to_s(digits=DIGITS_TO_PRINT)
     end
 
   end
